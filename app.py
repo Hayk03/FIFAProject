@@ -1,3 +1,17 @@
+"""
+FIFA 24 Player Stats Analysis — Streamlit web report.
+
+This page is the interactive equivalent of the Jupyter notebook:
+it walks through reading & cleaning the data, EDA, and the five
+hypotheses (H1-H5) with the same plots, statistics and conclusions.
+
+Run with:
+    streamlit run streamlit_app.py
+
+Expects `male_players.csv` (the EA Sports FC 24 male players file)
+in the same folder as this script.
+"""
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -6,8 +20,6 @@ import streamlit as st
 
 st.set_page_config(page_title="FIFA 24 Player Analysis", page_icon="⚽", layout="wide")
 
-# Order used for player_class everywhere (keeps colors / legends consistent)
-CLASS_ORDER = ["Stricker", "Midfielder", "Defender", "GoulKeeper"]
 COLS = [
     "short_name", "player_positions", "value_eur", "overall", "potential", "age",
     "international_reputation", "preferred_foot", "weak_foot", "skill_moves",
@@ -34,10 +46,8 @@ def main_position(positions):
 @st.cache_data(show_spinner="Loading and cleaning the dataset…")
 def load_data(path="male_players.csv"):
     """Read the raw file, keep FIFA 24, select columns, clean, and engineer features."""
-    df_raw = pd.read_csv(path, low_memory=False)
-    n_raw = df_raw.shape[0]
-
-    df = df_raw[df_raw["fifa_version"] == 24.0].copy().reset_index(drop=True)
+    df = pd.read_csv(path, low_memory=False)
+    n_raw = df.shape[0]
     n_v24 = df.shape[0]
 
     df = df[COLS].copy()
@@ -52,8 +62,6 @@ def load_data(path="male_players.csv"):
     slope, intercept = np.polyfit(df["overall"], df["value_log"], 1)
     df["value_resid"] = df["value_log"] - (slope * df["overall"] + intercept)
 
-    df["bmi"] = df["weight_kg"] / (df["height_cm"] / 100) ** 2
-    df["value_per_overall"] = df["value_eur"] / df["overall"]
     df["overall_band"] = pd.cut(
         df["overall"], bins=[59, 69, 79, 99], labels=["60-69", "70-79", "80-99"]
     )
@@ -134,9 +142,8 @@ elif section == "Data & cleaning":
     st.title("Data & cleaning")
 
     st.markdown(
-        f"The raw file holds **{meta['n_raw']:,} rows** across all FIFA versions (15–24); "
-        "the same player repeats in every version. We keep only **FIFA 24**, which leaves "
-        f"**{meta['n_v24']:,} players**, then select the 18 columns relevant to the analysis."
+        f"The dataset holds **{meta['n_v24']:,} FIFA 24 players** (the full multi-version file "
+        "was pre-filtered to FIFA 24 and to the 18 columns relevant to the analysis)."
     )
 
     st.subheader("Missing values")
@@ -175,7 +182,6 @@ elif section == "EDA":
     )
     fig = px.violin(
         field, x="player_class", y=attr, color="player_class", box=True,
-        category_orders={"player_class": CLASS_ORDER},
     )
     fig.update_layout(showlegend=False, height=450)
     st.plotly_chart(fig, width="stretch")
@@ -190,7 +196,6 @@ elif section == "EDA":
     )
     fig = px.violin(
         df, x="player_class", y=num, color="player_class", box=True,
-        category_orders={"player_class": CLASS_ORDER},
     )
     fig.update_layout(showlegend=False, height=450)
     st.plotly_chart(fig, width="stretch")
@@ -209,7 +214,6 @@ elif section == "EDA":
     )
     fig = px.bar(
         counts, x=cat, y="count", color="player_class", barmode="group",
-        category_orders={"player_class": CLASS_ORDER},
     )
     fig.update_layout(height=450)
     st.plotly_chart(fig, width="stretch")
@@ -246,7 +250,6 @@ elif section == "H1 · Value vs rating":
     fig = px.scatter(
         df.sample(min(6000, len(df)), random_state=0),
         x="overall", y=ycol, color="player_class", opacity=0.5,
-        category_orders={"player_class": CLASS_ORDER},
     )
     fig.update_layout(height=500)
     st.plotly_chart(fig, width="stretch")
@@ -287,7 +290,6 @@ elif section == "H2 · Age & value":
     fig = px.scatter(
         plot_df.sample(min(6000, len(plot_df)), random_state=0),
         x="overall", y="value_log", color="age_group", opacity=0.45,
-        category_orders={"age_group": ["Young", "Older"]},
         labels={"value_log": "log10(value)"},
     )
     fig.update_layout(height=500)
